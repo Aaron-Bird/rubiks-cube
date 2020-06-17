@@ -3,7 +3,7 @@
     "baseUrl": "./",
     "outDir": "./dist/",
     "target": "ES2020",
-    "moduleResolution": "node", // three need
+    "moduleResolution": "node", // threejs need
     "module": "CommonJS",
     "esModuleInterop": true,
     "noImplicitAny": true,
