@@ -18,7 +18,6 @@ module.exports = smp.wrap({
     new HtmlWebpackPlugin({
       template: './src/index.html',
       inject: true,
-      open: false,
     }),
   ],
   'module': {

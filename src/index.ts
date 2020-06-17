@@ -6,14 +6,14 @@ import {RubikCube, Cubelet} from './rubik-cube';
 
 const minMoveDistance = 10;
 const rotationRadPerPx = 0.01;
-const debug = false;
+const debug = true;
 
 const raycaster = new THREE.Raycaster();
 const cubeletModels: THREE.Mesh<THREE.BoxBufferGeometry, any>[] = [];
 
 let screenWidth = window.innerWidth;
 let screenHeight = window.innerHeight;
-const screenCenter = new THREE.Vector2(screenWidth / 2, screenHeight / 2);
+const screenCenterCoords = new THREE.Vector2(screenWidth / 2, screenHeight / 2);
 
 let draggable = true;
 let mouseTarget: THREE.Intersection;
@@ -22,7 +22,7 @@ const mouseTargetFaceDirection = new THREE.Vector3(); // Vector3
 const mouseCoords = new THREE.Vector2();
 const mousedownCoords = new THREE.Vector2();
 
-type Notation =[string, number]
+type Notation =[string, number];
 const notationTable: {x: Notation[], y: Notation[], z: Notation[]} = {
   x: [['L', 1], ['M', 1], ['R', -1]], // M: horizontal, left right
   y: [['D', 1], ['E', 1], ['U', -1]], // E: vertical, front back
@@ -50,7 +50,6 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
-
 controls.enableDamping = true;
 controls.rotateSpeed = 1.5;
 controls.minDistance = 5;
@@ -58,11 +57,6 @@ controls.maxDistance = 10;
 
 function createCube(info: Cubelet) {
   const geometry = new THREE.BoxBufferGeometry(0.99, 0.99, 0.99);
-
-  const cubeEdges = new THREE.EdgesGeometry(geometry, -1);
-  const edgesMtl = new THREE.LineBasicMaterial({color: '#000', morphTargets: true});
-  const cubeLine = new THREE.LineSegments(cubeEdges, edgesMtl);
-
   const materials = info.colors.map((color: string) => {
     if (debug) {
       return new THREE.MeshLambertMaterial({emissive: color, side: THREE.DoubleSide, transparent: true});
@@ -70,7 +64,12 @@ function createCube(info: Cubelet) {
     return new THREE.MeshBasicMaterial({color: color, side: THREE.DoubleSide, transparent: true});
   });
   const cube = new THREE.Mesh(geometry, materials);
+
+  const cubeEdges = new THREE.EdgesGeometry(geometry, -1);
+  const edgesMtl = new THREE.LineBasicMaterial({color: '#000', morphTargets: true});
+  const cubeLine = new THREE.LineSegments(cubeEdges, edgesMtl);
   cube.add(cubeLine);
+
   return cube;
 }
 
@@ -78,13 +77,13 @@ const URLSearchStr = window.location.search;
 const searchParam = new URLSearchParams(URLSearchStr.slice(1));
 const fd = searchParam.get('fd');
 
-interface ExtendMesh extends THREE.Mesh<THREE.BoxBufferGeometry, any> {
+interface CubeletModel extends THREE.Mesh<THREE.BoxBufferGeometry, any> {
   cubeType: string;
 }
 
 const rubikCube = new RubikCube(fd);
 for (const cubeInfo of rubikCube.cubelets) {
-  const cubeletModel = createCube(cubeInfo) as ExtendMesh;
+  const cubeletModel = createCube(cubeInfo) as CubeletModel;
   cubeletModel.name = 'cubelet';
   cubeletModel.cubeType = cubeInfo.type;
   cubeletModel.position.set(cubeInfo.x, cubeInfo.y, cubeInfo.z);
@@ -97,14 +96,14 @@ for (const cubeInfo of rubikCube.cubelets) {
 window.addEventListener('resize', debounce(function() {
   screenWidth = window.innerWidth;
   screenHeight = window.innerHeight;
-  screenCenter.set(screenWidth / 2, screenHeight / 2);
+  screenCenterCoords.set(screenWidth / 2, screenHeight / 2);
 
   camera.aspect = screenWidth / screenHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(screenWidth, screenHeight);
 }));
 
-renderer.domElement.addEventListener('mousedown', function(e) {
+renderer.domElement.addEventListener('mousedown', function() {
   handleMouseDown();
 });
 
@@ -144,7 +143,6 @@ const moveTable: {[index: string]: any[]} = {
 document.querySelector('#resolve-btn').addEventListener('click', function() {
   const solveStr = rubikCube.solve();
   const moveList = solveStr.split(' ');
-  console.log(solveStr);
   for (const i of moveList) {
   //   const axis = moveTable;
     rubikCube.move(i);
@@ -165,12 +163,12 @@ animate();
 
 
 function handleMouseUp() {
-  if (mouseTarget && mouseTarget instanceof THREE.Mesh) {
-    mouseTarget.material.forEach((m: THREE.MeshBasicMaterial) => {
-      m.opacity = 0.5;
+  if (debug && mouseTarget) {
+    const cubeletModel = mouseTarget.object as CubeletModel;
+    cubeletModel.material.forEach((m: THREE.MeshBasicMaterial) => {
+      m.opacity = 1;
     });
   }
-
 
   lockRotationDirection = false;
   mouseTarget = null;
@@ -242,24 +240,24 @@ function handleMouseUp() {
     // Dissolve the cube layer
     if (layerGroup.children) {
       for (let i = layerGroup.children.length - 1; i >= 0; i--) {
-        const obj = layerGroup.children[i];
+        const cubeletModel = layerGroup.children[i] as CubeletModel;
         const position = new THREE.Vector3();
-        obj.getWorldPosition(position);
+        cubeletModel.getWorldPosition(position);
         const quaternion = new THREE.Quaternion();
-        obj.getWorldQuaternion(quaternion);
-        layerGroup.remove(obj);
+        cubeletModel.getWorldQuaternion(quaternion);
+        layerGroup.remove(cubeletModel);
         position.x = parseFloat((position.x).toFixed(15));
         position.y = parseFloat((position.y).toFixed(15));
         position.z = parseFloat((position.z).toFixed(15));
         if (debug) {
-          (obj as any).material.forEach((m: THREE.MeshBasicMaterial) => {
+          cubeletModel.material.forEach((m: THREE.MeshBasicMaterial) => {
             m.opacity = 1;
           });
         }
 
-        obj.position.copy(position);
-        obj.quaternion.copy(quaternion);
-        scene.add(obj);
+        cubeletModel.position.copy(position);
+        cubeletModel.quaternion.copy(quaternion);
+        scene.add(cubeletModel);
       }
 
       layerGroup.rotation.x = 0;
@@ -287,12 +285,10 @@ function handleMouseDown() {
 
     mouseTarget = intersects[0];
     if (debug) {
-      const object = mouseTarget.object;
-      if (object instanceof THREE.Mesh) {
-        object.material.forEach((m: THREE.MeshBasicMaterial) => {
-          m.opacity = 0.5;
-        });
-      }
+      const cubeletModel = mouseTarget.object as CubeletModel;
+      cubeletModel.material.forEach((m: THREE.MeshBasicMaterial) => {
+        m.opacity = 0.5;
+      });
     }
 
     controls.enabled = false;
@@ -391,7 +387,8 @@ function handleMouseMove() {
     // Package cubelet to layer
     for (let i = 0; i < cubeletModels.length; i++) {
       if (cubeletModels[i].position[layerRorationAxis] === mouseTarget.object.position[layerRorationAxis]) {
-        if (debug && cubeletModels[i] instanceof THREE.Mesh) {
+        // if (debug && cubeletModels[i] instanceof THREE.Mesh) {
+        if (debug) {
           cubeletModels[i].material.forEach((m: THREE.MeshBasicMaterial) => {
             m.opacity = 0.5;
           });
@@ -409,9 +406,9 @@ function handleMouseMove() {
       dir.subVectors(camera.position, new THREE.Vector3(0, camera.position.y, 0)).normalize();
       const rad = new THREE.Vector2(dir.z, dir.x).angle();
       const mouseCurrentRotation = new THREE.Vector2().copy(mouseCoords);
-      mouseCurrentRotation.rotateAround(screenCenter, rad * yAxisDirection);
+      mouseCurrentRotation.rotateAround(screenCenterCoords, rad * yAxisDirection);
       const mouseDownRotation = new THREE.Vector2().copy(mousedownCoords);
-      mouseDownRotation.rotateAround(screenCenter, rad * yAxisDirection);
+      mouseDownRotation.rotateAround(screenCenterCoords, rad * yAxisDirection);
 
       mouseMoveDistance = mouseCurrentRotation[mouseMoveAxis] - mouseDownRotation[mouseMoveAxis];
     }
