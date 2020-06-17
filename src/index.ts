@@ -50,6 +50,7 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
+
 controls.enableDamping = true;
 controls.rotateSpeed = 1.5;
 controls.minDistance = 5;
@@ -143,9 +144,9 @@ const moveTable: {[index: string]: any[]} = {
 document.querySelector('#resolve-btn').addEventListener('click', function() {
   const solveStr = rubikCube.solve();
   const moveList = solveStr.split(' ');
+  console.log(solveStr);
   for (const i of moveList) {
-    const axis = moveTable;
-    console.log(axis);
+  //   const axis = moveTable;
     rubikCube.move(i);
     searchParam.set('fd', rubikCube.asString());
     window.history.replaceState('', '', '?' + searchParam.toString());
@@ -180,7 +181,7 @@ function handleMouseUp() {
   const sign = Math.sign(layerGroup.rotation[layerRorationAxis]);
 
   let endDeg;
-  if ((0 <= deg && deg <= 45) || (315 < deg && deg <= 360)) {
+  if (0 <= deg && deg <= 45) {
     endDeg = 0;
   } else if (45 < deg && deg <= 135) {
     endDeg = 90;
@@ -189,7 +190,7 @@ function handleMouseUp() {
   } else if (225 < deg && deg <= 315) {
     endDeg = 270;
   } else if (315 < deg && deg <= 360) {
-    endDeg = 0;
+    endDeg = 360;
   }
 
   // Use url search params to record cube colors
