@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist/",
+    "target": "ES2020",
+    "moduleResolution": "node", // three need
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "isolatedModules": true,
+    "strictBindCallApply": true,
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "types/**/*.d.ts"
+  ]
+}
