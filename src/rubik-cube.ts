@@ -1,8 +1,9 @@
+
 // @ts-ignore
 import CubeJs from 'cubejs';
 
 const c: {[index: string]: string} = {
-  'U': '#FFF', // White
+  'U': '#FEFEFE', // White
   'R': '#891214', // Red
   'F': '#199B4C', // Green
   'D': '#FED52F', // yellow
@@ -16,7 +17,7 @@ export interface Cubelet {
   z: number,
   num: number,
   type: string,
-  colors?: string[]
+  color?: {[index: string]: string},
 }
 
 let isInitSolver = false;
@@ -72,14 +73,16 @@ export class RubikCube {
       faceColor[name] = colorStr.slice(start, end);
     }
 
-    for (const coord of this.cubelets) {
+    for (const cubelet of this.cubelets) {
       const cubeColors: string[] = [c.U, c.U, c.U, c.U, c.U, c.U]; // [Right, Left, Up, Down, Front, Back]
-      const {x, y, z, num} = coord;
+      const cubeColor: {[index: string]: string} = {};
+      const {x, y, z, num} = cubelet;
 
       // Up
       if (y === 1) {
         const i = num;
         cubeColors[2]= c[faceColor['U'][i]];
+        cubeColor['U']= c[faceColor['U'][i]];
       }
 
       // Down
@@ -87,6 +90,7 @@ export class RubikCube {
         const n = num - 18;
         const i = Math.floor((8 - n) / 3) * 3 + (3 - (8 - n) % 3) - 1;
         cubeColors[3] = c[faceColor['D'][i]];
+        cubeColor['D'] = c[faceColor['D'][i]];
       }
 
       // Right
@@ -94,18 +98,21 @@ export class RubikCube {
         const n = (num + 1) / 3 - 1;
         const i = Math.floor(n / 3) * 3 + (3 - n % 3) - 1;
         cubeColors[0] = c[faceColor['R'][i]];
+        cubeColor['R'] = c[faceColor['R'][i]];
       }
 
       // Left
       if (x === -1) {
         const i = num / 3;
         cubeColors[1] = c[faceColor['L'][i]];
+        cubeColor['L'] = c[faceColor['L'][i]];
       }
 
       // Front
       if (z === 1) {
         const i = Math.floor((num - 6) / 7) + ((num - 6) % 7);
         cubeColors[4] = c[faceColor['F'][i]];
+        cubeColor['F'] = c[faceColor['F'][i]];
       }
 
       // Back
@@ -113,8 +120,9 @@ export class RubikCube {
         const n = Math.floor(num / 7) + (num % 7);
         const i = Math.floor(n / 3) * 3 + (3 - n % 3) - 1;
         cubeColors[5] = c[faceColor['B'][i]];
+        cubeColor['B'] = c[faceColor['B'][i]];
       }
-      coord.colors = cubeColors;
+      cubelet.color = cubeColor;
     }
   }
 
