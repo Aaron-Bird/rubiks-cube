@@ -58,6 +58,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
 });
 renderer.setSize(screenWidth, screenHeight);
+renderer.setPixelRatio( window.devicePixelRatio );
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
