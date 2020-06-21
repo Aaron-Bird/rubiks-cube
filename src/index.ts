@@ -37,7 +37,7 @@ let layerRotationAxisToward: 1 | -1 = 1;
 let lockRotationDirection = false;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#FFF');
+scene.background = new THREE.Color('#F1F3F3');
 // scene.background = new THREE.TextureLoader().load(require('./img/background.jpg').default);
 
 const directionalLight = new THREE.DirectionalLight('#FFF', 0.05);

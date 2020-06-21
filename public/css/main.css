@@ -1,0 +1,34 @@
+body {
+    overflow: hidden;
+    margin: 0;
+}
+
+canvas {
+    outline: 0;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.ribbon {
+    display: none;
+    position: fixed;
+    right: 20px;
+    top: 20px;
+}
+
+.btn {
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    color: #aaa;
+}
+
+#fork-me {
+    position: fixed;
+    top: 0;
+    right: 0;
+}

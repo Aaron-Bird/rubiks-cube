@@ -11,15 +11,6 @@ module.exports = smp.wrap({
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  'mode': 'development',
-  'devtool': 'eval-source-map',
-  'devServer': {
-    port: '8000',
-    host: '0.0.0.0',
-    public: 'localhost:8000',
-    open: false,
-    quiet: true,
-  },
   'plugins': [
     new ForkTsCheckerWebpackPlugin(),
     new webpack.ProgressPlugin(),
@@ -36,7 +27,7 @@ module.exports = smp.wrap({
         loader: 'babel-loader',
       },
       {
-        test: /\.(png|svg|jpg|gif)$/,
+        test: /\.(png|svg|jpg|gif|webp)$/,
         use: ['file-loader'],
       },
     ],
@@ -45,4 +36,3 @@ module.exports = smp.wrap({
     extensions: ['.tsx', '.ts', '.js'],
   },
 });
-
