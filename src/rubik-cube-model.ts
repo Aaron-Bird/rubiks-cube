@@ -1,7 +1,5 @@
 import * as THREE from 'three';
-import {Mesh} from 'three';
 import {RubikCube, Cubelet} from './rubik-cube';
-import {Vector2} from 'three';
 
 class Geometry {
   static roundedEdgeBox(width = 1, height = 1, depth = 1, radius0 = 0.1, smoothness = 4) {
@@ -28,7 +26,7 @@ class Geometry {
   static roundedPlane(x = 0, y = 0, width = 0.9, height = 0.9, radius = 0.1) {
     // Reference: https://threejs.org/examples/webgl_geometry_shapes.html
     const shape = new THREE.Shape();
-    const center = new Vector2(-(x + width / 2), -(y + height / 2));
+    const center = new THREE.Vector2(-(x + width / 2), -(y + height / 2));
     shape.moveTo(center.x, center.y + radius);
     shape.lineTo(center.x, center.y + height - radius);
     shape.quadraticCurveTo(center.x, center.y + height, center.x + radius, center.y + height);
@@ -58,7 +56,7 @@ const faceInfo: {
   R: {position: [0.51, 0, 0], rotation: [0, Math.PI /2, 0]},
 };
 
-export interface CubeletModel extends Mesh {
+export interface CubeletModel extends THREE.Mesh {
   cubeType: string;
 }
 

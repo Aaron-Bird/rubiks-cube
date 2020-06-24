@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import {Vector3, Mesh} from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import TWEEN from '@tweenjs/tween.js';
 
@@ -19,6 +18,7 @@ const screenCenterCoords = new THREE.Vector2(screenWidth / 2, screenHeight / 2);
 let draggable = true;
 let mouseTarget: THREE.Intersection;
 let mouseMoveAxis: 'x' | 'y';
+let initMoveToward: number;
 const mouseTargetFaceDirection = new THREE.Vector3(); // Vector3
 const mouseCoords = new THREE.Vector2();
 const mousedownCoords = new THREE.Vector2();
@@ -52,7 +52,11 @@ scene.add(directionalLight2);
 // scene.add(ambientLight);
 
 const camera = new THREE.PerspectiveCamera(75, screenWidth / screenHeight, 0.1, 30);
-camera.position.set(4, 4, 4);
+if (screenWidth < 576) {
+  camera.position.set(4, 4, 4);
+} else {
+  camera.position.set(3.5, 3, 3.5);
+}
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -65,7 +69,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
 controls.enableDamping = true;
 controls.rotateSpeed = 1.5;
-controls.minDistance = debug ? 1 : 5;
+controls.minDistance = debug ? 1 : 3;
 controls.maxDistance = debug ? 20 : 10;
 
 const URLSearchStr = window.location.search;
@@ -135,12 +139,13 @@ animate();
 function handleMouseUp() {
   if (debug && mouseTarget) {
     const cubeletModel = mouseTarget.object;
-    setOpacity(cubeletModel as Mesh, 1);
+    setOpacity(cubeletModel as THREE.Mesh, 1);
   }
 
   lockRotationDirection = false;
   mouseTarget = null;
   layerRotationAxisToward = 1;
+  initMoveToward = null;
 
   // current rotation deg
   const deg = Math.abs((THREE as any).Math.radToDeg(layerGroup.rotation[layerRorationAxis])) % 360;
@@ -222,7 +227,7 @@ function handleMouseUp() {
         position.y = parseFloat((position.y).toFixed(15));
         position.z = parseFloat((position.z).toFixed(15));
         if (debug) {
-          setOpacity(cubeletModel as Mesh, 1);
+          setOpacity(cubeletModel as THREE.Mesh, 1);
         }
 
         cubeletModel.position.copy(position);
@@ -256,7 +261,7 @@ function handleMouseDown() {
 
     mouseTarget = intersects[0];
     if (debug) {
-      const cubeletModel = mouseTarget.object as Mesh;
+      const cubeletModel = mouseTarget.object as THREE.Mesh;
       setOpacity(cubeletModel, 0.5);
     }
 
@@ -296,7 +301,7 @@ function handleMouseMove() {
     mouseTargetFaceDirection.transformDirection(mouseTarget.object.matrixWorld);
 
     const point = mouseTarget.point;
-    const mouseDirection = new THREE.Vector3().subVectors(point, new Vector3(0, 0, 0)).normalize();
+    const mouseDirection = new THREE.Vector3().subVectors(point, new THREE.Vector3(0, 0, 0)).normalize();
     // Don't use mouseTargetFaceDirection
     // The rounded corners of the box may face the other way.
     // const closestAxis = getClosestAxis(mouseTargetFaceDirection);
@@ -371,7 +376,7 @@ function handleMouseMove() {
     for (let i = cubeletModels.length - 1; i >= 0; i--) {
       if (cubeletModels[i].position[layerRorationAxis] === mouseTarget.object.position[layerRorationAxis]) {
         if (debug) {
-          setOpacity(cubeletModels[i] as Mesh, 0.5);
+          setOpacity(cubeletModels[i] as THREE.Mesh, 0.5);
         }
 
         layerGroup.add(cubeletModels[i]);
@@ -393,9 +398,13 @@ function handleMouseMove() {
       mouseMoveDistance = mouseCurrentRotation[mouseMoveAxis] - mouseDownRotation[mouseMoveAxis];
     }
 
+    if (!initMoveToward) {
+      initMoveToward = Math.sign(mouseMoveDistance);
+    }
+
     if (layerGroup && layerRorationAxis) {
       layerGroup.rotation[layerRorationAxis] =
-        (mouseMoveDistance - minMoveDistance) * rotationRadPerPx * layerRotationAxisToward;
+        (mouseMoveDistance - minMoveDistance * initMoveToward) * rotationRadPerPx * layerRotationAxisToward;
     }
   }
 }

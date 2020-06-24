@@ -7,7 +7,7 @@ const c: {[index: string]: string} = {
   'L': '#FF5525', // Orange
 };
 
-const notationT: {
+const notationSwapTable: {
   [indexOf: string]: [number, number, number, number][];
 } = {
   L: [[0, 18, 27, 53], [3, 21, 30, 50], [6, 24, 33, 47], [36, 38, 44, 42], [37, 41, 43, 39]],
@@ -149,7 +149,7 @@ export class RubikCube {
       }
 
       for (let j = 0; j < rotationTimes; j++) {
-        const actions = notationT[notation];
+        const actions = notationSwapTable[notation];
         for (const k of actions) {
           this.swapFaceColor(k, toward);
         }
