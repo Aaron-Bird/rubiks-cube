@@ -5,7 +5,7 @@ import {Vector2} from 'three';
 
 class Geometry {
   static roundedEdgeBox(width = 1, height = 1, depth = 1, radius0 = 0.1, smoothness = 4) {
-    // reference: https://discourse.threejs.org/t/round-edged-box/1402
+    // Reference: https://discourse.threejs.org/t/round-edged-box/1402
     const shape = new THREE.Shape();
     const eps = 0.00001;
     const radius = radius0 - eps;
@@ -26,7 +26,7 @@ class Geometry {
     return geometry;
   }
   static roundedPlane(x = 0, y = 0, width = 0.9, height = 0.9, radius = 0.1) {
-    // refer: https://threejs.org/examples/webgl_geometry_shapes.html
+    // Reference: https://threejs.org/examples/webgl_geometry_shapes.html
     const shape = new THREE.Shape();
     const center = new Vector2(-(x + width / 2), -(y + height / 2));
     shape.moveTo(center.x, center.y + radius);
@@ -77,15 +77,15 @@ export class RubikCubeModel extends RubikCube {
 
   generateCubeletModel(info: Cubelet) {
     const geometry = Geometry.roundedEdgeBox(1, 1, 1, 0.05, 4);
-    const materials =new THREE.MeshLambertMaterial({emissive: '#EEE', transparent: true});
+    const materials =new THREE.MeshLambertMaterial({emissive: '#333', transparent: true});
     const cubeletModel = new THREE.Mesh(geometry, materials);
     const color = info.color;
     for (const key of Object.keys(color)) {
       const planeGeometry = Geometry.roundedPlane(0, 0, 0.9, 0.9, 0.1);
       const planeMaterial = new THREE.MeshLambertMaterial({emissive: color[key], transparent: true});
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane.rotation.set(...faceInfo[key].rotation);
-      plane.position.set(...faceInfo[key].position);
+      plane.rotation.fromArray(faceInfo[key].rotation);
+      plane.position.fromArray(faceInfo[key].position);
       plane.name = 'face';
       cubeletModel.attach(plane);
     }

@@ -118,15 +118,7 @@ renderer.domElement.addEventListener('touchmove', function(e) {
 
 // todo
 // random solve cube
-
 document.querySelector('#resolve-btn').addEventListener('click', function() {
-  const solveStr = rubikCube.solve();
-  const moveList = solveStr.split(' ');
-  for (const i of moveList) {
-    rubikCube.move(i);
-    searchParam.set('fd', rubikCube.asString());
-    window.history.replaceState('', '', '?' + searchParam.toString());
-  }
 });
 
 function animate(time?: number) {
@@ -207,7 +199,11 @@ function handleMouseUp() {
         .onUpdate(() => {
           layerGroup.rotation[layerRorationAxis] = (THREE as any).Math.degToRad(currentRotation.deg);
           layerGroup.updateWorldMatrix(false, false);
-        }).onComplete(onEnd).start();
+        })
+        .onComplete(onEnd)
+        // Parameter 'undefined' is needed in version 18.6.0
+        // Reference: https://github.com/tweenjs/tween.js/pull/550
+        .start(undefined);
   } else {
     onEnd();
   }

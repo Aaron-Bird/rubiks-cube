@@ -30,9 +30,7 @@
     "webpack-merge": "^4.2.2"
   },
   "dependencies": {
-    "@tweenjs/tween.js": "^18.5.0",
-    "@types/tween.js": "^18.5.1",
-    "cubejs": "^1.3.2",
+    "@tweenjs/tween.js": "^18.6.0",
     "fork-ts-checker-webpack-plugin": "4.1.6",
     "ray-tracing-renderer": "^0.10.0",
     "three": "0.116.1"

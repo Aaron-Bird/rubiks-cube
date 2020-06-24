@@ -74,3 +74,18 @@ export function getClosestAxis(vec: Vector3): Axis {
   }
   return maxAxis as Axis;
 }
+
+export function err(strs: TemplateStringsArray, ...args: any[]) {
+  let result = '';
+  strs.forEach((str, i) => {
+    let arg = args[i];
+    if (typeof arg === 'object') {
+      arg = JSON.stringify(arg);
+    } else if (arg === undefined) {
+      arg = '';
+    }
+
+    result += str + arg;
+  });
+  return result;
+}
