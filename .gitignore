@@ -3,3 +3,5 @@ resource/
 node_modules/
 yarn.lock
 yarn-error.log
+
+src/solve.ts

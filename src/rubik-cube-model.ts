@@ -1,46 +1,6 @@
 import * as THREE from 'three';
 import {RubikCube, Cubelet} from './rubik-cube';
-
-class Geometry {
-  static roundedEdgeBox(width = 1, height = 1, depth = 1, radius0 = 0.1, smoothness = 4) {
-    // Reference: https://discourse.threejs.org/t/round-edged-box/1402
-    const shape = new THREE.Shape();
-    const eps = 0.00001;
-    const radius = radius0 - eps;
-    shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
-    shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
-    shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
-    shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
-    const geometry = new THREE.ExtrudeBufferGeometry(shape, {
-      depth: depth - radius0 * 2,
-      bevelEnabled: true,
-      bevelSegments: smoothness * 2,
-      steps: 1,
-      bevelSize: radius,
-      bevelThickness: radius0,
-      curveSegments: smoothness,
-    });
-    geometry.center();
-    return geometry;
-  }
-  static roundedPlane(x = 0, y = 0, width = 0.9, height = 0.9, radius = 0.1) {
-    // Reference: https://threejs.org/examples/webgl_geometry_shapes.html
-    const shape = new THREE.Shape();
-    const center = new THREE.Vector2(-(x + width / 2), -(y + height / 2));
-    shape.moveTo(center.x, center.y + radius);
-    shape.lineTo(center.x, center.y + height - radius);
-    shape.quadraticCurveTo(center.x, center.y + height, center.x + radius, center.y + height);
-    shape.lineTo(center.x + width - radius, center.y + height);
-    shape.quadraticCurveTo(center.x + width, center.y + height, center.x + width, center.y + height - radius);
-    shape.lineTo(center.x + width, center.y + radius);
-    shape.quadraticCurveTo(center.x + width, center.y, center.x + width - radius, center.y);
-    shape.lineTo(center.x + radius, center.y);
-    shape.quadraticCurveTo(center.x, center.y, center.x, center.y + radius);
-    // return shape;
-    const geometry = new THREE.ShapeBufferGeometry(shape);
-    return geometry;
-  }
-}
+import {roundedEdgeBox, roundedPlane} from './geometries';
 
 const faceInfo: {
   [index: string]: {
@@ -57,29 +17,33 @@ const faceInfo: {
 };
 
 export interface CubeletModel extends THREE.Mesh {
-  cubeType: string;
+  cubeType?: string;
+  num?: number;
+  initPosition?: THREE.Vector3;
 }
 
 export class RubikCubeModel extends RubikCube {
   model = new THREE.Group();
-  constructor(fb: string) {
+  constructor(fb?: string) {
     super(fb);
     for (const cubeInfo of this.cubelets) {
-      const cubeletModel = this.generateCubeletModel(cubeInfo) as CubeletModel;
+      const cubeletModel = this.generateCubeletModel(cubeInfo);
       cubeletModel.name = 'cubelet';
       cubeletModel.cubeType = cubeInfo.type;
+      cubeletModel.num = cubeInfo.num;
       cubeletModel.position.set(cubeInfo.x, cubeInfo.y, cubeInfo.z);
+      cubeletModel.initPosition = new THREE.Vector3().set(cubeInfo.x, cubeInfo.y, cubeInfo.z);
       this.model.add(cubeletModel);
     }
   }
 
   generateCubeletModel(info: Cubelet) {
-    const geometry = Geometry.roundedEdgeBox(1, 1, 1, 0.05, 4);
+    const geometry = roundedEdgeBox(1, 1, 1, 0.05, 4);
     const materials =new THREE.MeshLambertMaterial({emissive: '#333', transparent: true});
-    const cubeletModel = new THREE.Mesh(geometry, materials);
+    const cubeletModel = new THREE.Mesh(geometry, materials) as CubeletModel;
     const color = info.color;
     for (const key of Object.keys(color)) {
-      const planeGeometry = Geometry.roundedPlane(0, 0, 0.9, 0.9, 0.1);
+      const planeGeometry = roundedPlane(0, 0, 0.9, 0.9, 0.1);
       const planeMaterial = new THREE.MeshLambertMaterial({emissive: color[key], transparent: true});
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       plane.rotation.fromArray(faceInfo[key].rotation);
@@ -88,5 +52,20 @@ export class RubikCubeModel extends RubikCube {
       cubeletModel.attach(plane);
     }
     return cubeletModel;
+  }
+
+  dispose() {
+    for (const cubeletModel of (this.model.children as CubeletModel[])) {
+      if (cubeletModel.material instanceof THREE.Material) {
+        cubeletModel.material.dispose();
+      }
+      cubeletModel.geometry.dispose();
+      for (const plan of (cubeletModel.children as THREE.Mesh[])) {
+        if (plan.material instanceof THREE.Material) {
+          plan.material.dispose();
+        }
+        (plan as THREE.Mesh).geometry.dispose();
+      }
+    }
   }
 }

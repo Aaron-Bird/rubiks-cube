@@ -2,9 +2,16 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import TWEEN from '@tweenjs/tween.js';
 
-import {debounce, horizontalRotationAngle, setOpacity, getClosestAxis} from './utils';
+import {debounce, horizontalRotationAngle, setOpacity, getClosestAxis, toRotation, randomNotation} from './utils';
 import {RubikCubeModel} from './rubik-cube-model';
+import {LayerModel} from './layer-model';
+import {Axis, NotationBase, Toward} from './types';
 
+const notationTable: {[key in Axis]: [NotationBase, Toward][]} = {
+  x: [['L', 1], ['M', 1], ['R', -1]],
+  y: [['D', 1], ['E', 1], ['U', -1]],
+  z: [['B', 1], ['S', -1], ['F', -1]],
+};
 
 const minMoveDistance = 10;
 const rotationRadPerPx = 0.01;
@@ -23,20 +30,18 @@ const mouseTargetFaceDirection = new THREE.Vector3(); // Vector3
 const mouseCoords = new THREE.Vector2();
 const mousedownCoords = new THREE.Vector2();
 
-type Notation =[string, number];
-const notationTable: {x: Notation[], y: Notation[], z: Notation[]} = {
-  x: [['L', 1], ['M', 1], ['R', -1]], // M: horizontal, left right
-  y: [['D', 1], ['E', 1], ['U', -1]], // E: vertical, front back
-  z: [['B', 1], ['S', -1], ['F', -1]], // S: horizontal, front back
+const layerGroup = new LayerModel(debug);
+const box = new THREE.BoxHelper( layerGroup, '#fff' );
+box.onBeforeRender = function() {
+  this.update();
 };
 
-const layerGroup = new THREE.Group();
-let layerRotationNotation: Notation;
 let layerRorationAxis: 'x' | 'y' | 'z';
 let layerRotationAxisToward: 1 | -1 = 1;
 let lockRotationDirection = false;
 
 const scene = new THREE.Scene();
+// scene.add(box);
 scene.background = new THREE.Color('#F1F3F3');
 // scene.background = new THREE.TextureLoader().load(require('./img/background.jpg').default);
 
@@ -76,8 +81,8 @@ const URLSearchStr = window.location.search;
 const searchParam = new URLSearchParams(URLSearchStr.slice(1));
 const fd = searchParam.get('fd');
 
-const rubikCube = new RubikCubeModel(fd);
-const cubeletModels = rubikCube.model.children;
+let rubikCube = new RubikCubeModel(fd);
+let cubeletModels = rubikCube.model.children;
 scene.add(rubikCube.model);
 scene.add(layerGroup);
 
@@ -119,11 +124,56 @@ renderer.domElement.addEventListener('touchmove', function(e) {
   mouseCoords.set(touch.clientX, touch.clientY);
   handleMouseMove();
 });
+let disable = false;
+const ribbonEl = document.querySelector('#ribbon');
+function lock(func: Function) {
+  return async function() {
+    if (disable) {
+      return;
+    }
 
-// todo
-// random solve cube
-document.querySelector('#resolve-btn').addEventListener('click', function() {
-});
+    disable = true;
+    ribbonEl.classList.add('disable');
+    try {
+      await func();
+    } finally {
+      disable = false;
+      ribbonEl.classList.remove('disable');
+    }
+  };
+}
+
+const randomEl = document.querySelector('#random');
+randomEl.addEventListener('click', lock(async () => {
+  draggable = false;
+
+  for (let i = 0; i < 17; i++) {
+    const notation = randomNotation();
+    const [layerRorationAxis, axisValue, rotationRad] = toRotation(notation);
+    rubikCube.move(notation);
+    searchParam.set('fd', rubikCube.asString());
+    window.history.replaceState('', '', '?' + searchParam.toString());
+
+    layerGroup.group(layerRorationAxis, axisValue, cubeletModels);
+    await rotationTransition(layerRorationAxis, rotationRad);
+  }
+
+  mouseTarget = null;
+  layerRorationAxis = null;
+  mouseMoveAxis = null;
+  draggable = true;
+}));
+
+const resetEl = document.querySelector('#reset');
+resetEl.addEventListener('click', lock(async function() {
+  scene.remove(rubikCube.model);
+  rubikCube.dispose();
+  rubikCube = new RubikCubeModel();
+  cubeletModels = rubikCube.model.children;
+  scene.add(rubikCube.model);
+
+  window.history.replaceState('', '', './');
+}));
 
 function animate(time?: number) {
   requestAnimationFrame(animate);
@@ -135,17 +185,50 @@ function animate(time?: number) {
 };
 animate();
 
+async function rotationTransition(axis: Axis, endRad: number) {
+  await layerGroup.rotationAnimation(axis, endRad);
+  layerGroup.ungroup(rubikCube.model);
+  layerGroup.initRotation();
+}
 
-function handleMouseUp() {
+function getNotation(axis: 'x' | 'y' | 'z', value: number, sign: number, endDeg: number) {
+  if (endDeg < 90) {
+    throw new Error(`Wrong endDeg: ${endDeg}`);
+  }
+  // -1 0 1 -> 0 1 2
+  const index = value + 1;
+  const layerRotationNotation = notationTable[axis][index];
+  let notation = '';
+  // Use url search params to record cube colors
+  if (endDeg > 0 && layerRotationNotation) {
+    let toward = layerRotationNotation[1];
+    if (sign < 0) {
+      toward *= -1;
+    }
+    let baseStr = layerRotationNotation[0];
+    if (toward< 0) {
+      baseStr += `'`;
+    }
+    baseStr += ' ';
+    for (let i = 0; i < Math.floor(endDeg / 90); i++) {
+      notation += baseStr;
+    }
+  }
+  console.log(notation);
+  return notation;
+}
+
+async function handleMouseUp() {
   if (debug && mouseTarget) {
     const cubeletModel = mouseTarget.object;
     setOpacity(cubeletModel as THREE.Mesh, 1);
   }
 
-  lockRotationDirection = false;
-  mouseTarget = null;
-  layerRotationAxisToward = 1;
-  initMoveToward = null;
+  controls.enabled = true;
+
+  if (!layerRorationAxis || !draggable) {
+    return;
+  }
 
   // current rotation deg
   const deg = Math.abs((THREE as any).Math.radToDeg(layerGroup.rotation[layerRorationAxis])) % 360;
@@ -164,88 +247,36 @@ function handleMouseUp() {
     endDeg = 360;
   }
 
-  // Use url search params to record cube colors
-  if (endDeg > 0 && layerRotationNotation) {
-    let toward = layerRotationNotation[1];
-    if (sign < 0) {
-      toward *= -1;
-    }
-    let baseStr = layerRotationNotation[0];
-    if (toward< 0) {
-      baseStr += `'`;
-    }
-    baseStr += ' ';
+  if (endDeg > 0) {
+    // Get Singmaster notation according the rotation axis and mouse movement direction
+    const position = mouseTarget.object.position;
+    // // -1 0 1 -> 0 1 2
+    // const index = position[layerRorationAxis] + 1;
+    const value = position[layerRorationAxis];
+    const notation = getNotation(layerRorationAxis, value, sign, endDeg);
+    rubikCube.move(notation);
 
-    let moveStr = '';
-    for (let i = 0; i < Math.floor(endDeg / 90); i++) {
-      moveStr += baseStr;
-    }
-    // Update URL
-    rubikCube.move(moveStr);
     searchParam.set('fd', rubikCube.asString());
     window.history.replaceState('', '', '?' + searchParam.toString());
   }
 
-  // Transition animation
-  // Move the rotation angle to a multiple of 90 or 0
+  // const startRad =(THREE as any).Math.degToRad(deg * sign);
+  const endRad = (THREE as any).Math.degToRad(endDeg * sign);
 
-  // Don't put controls.enabled in Tween.onComplete
-  controls.enabled = true;
-  if (typeof endDeg === 'number') {
-    draggable = false;
+  draggable = false;
+  // Must use await
+  // Disable drag cube until the transition is complete
+  await rotationTransition(layerRorationAxis, endRad);
+  draggable = true;
 
-    const currentRotation = {deg: deg * sign};
-    const targetRotation = {deg: endDeg * sign};
+  lockRotationDirection = false;
+  mouseTarget = null;
+  layerRotationAxisToward = 1;
+  initMoveToward = null;
 
-    const time = Math.abs(endDeg - deg) * (10 / Math.PI);
-    new TWEEN.Tween(currentRotation)
-        .to(targetRotation, time)
-        .easing(TWEEN.Easing.Quadratic.Out)
-        .onUpdate(() => {
-          layerGroup.rotation[layerRorationAxis] = (THREE as any).Math.degToRad(currentRotation.deg);
-          layerGroup.updateWorldMatrix(false, false);
-        })
-        .onComplete(onEnd)
-        // Parameter 'undefined' is needed in version 18.6.0
-        // Reference: https://github.com/tweenjs/tween.js/pull/550
-        .start(undefined);
-  } else {
-    onEnd();
-  }
 
-  function onEnd() {
-    // Dissolve the cube layer
-    if (layerGroup.children) {
-      for (let i = layerGroup.children.length - 1; i >= 0; i--) {
-        const cubeletModel = layerGroup.children[i];
-        const position = new THREE.Vector3();
-        cubeletModel.getWorldPosition(position);
-        const quaternion = new THREE.Quaternion();
-        cubeletModel.getWorldQuaternion(quaternion);
-        layerGroup.remove(cubeletModel);
-        position.x = parseFloat((position.x).toFixed(15));
-        position.y = parseFloat((position.y).toFixed(15));
-        position.z = parseFloat((position.z).toFixed(15));
-        if (debug) {
-          setOpacity(cubeletModel as THREE.Mesh, 1);
-        }
-
-        cubeletModel.position.copy(position);
-        cubeletModel.quaternion.copy(quaternion);
-
-        rubikCube.model.add(cubeletModel);
-      }
-
-      layerGroup.rotation.x = 0;
-      layerGroup.rotation.y = 0;
-      layerGroup.rotation.z = 0;
-    }
-
-    layerRorationAxis = null;
-    layerRotationNotation = null;
-    draggable = true;
-    mouseMoveAxis = null;
-  }
+  layerRorationAxis = null;
+  mouseMoveAxis = null;
 }
 
 function handleMouseDown() {
@@ -253,6 +284,17 @@ function handleMouseDown() {
   const y = -(mouseCoords.y/ screenHeight) * 2 + 1;
   raycaster.setFromCamera({x, y}, camera);
   const intersects = raycaster.intersectObjects(rubikCube.model.children);
+
+  // Disable camera control when playing rotation animation
+  if (intersects.length || raycaster.intersectObjects(layerGroup.children).length) {
+    controls.enabled = false;
+  }
+  // Fix bug: Incorrect fd value (url) when rotating layer after random shuffle
+  // Don't move the code up.
+  // Otherwise the above controls.enabled will not be executed
+  if (!draggable) {
+    return;
+  }
 
   if (intersects.length) {
     // Show hand when the mouse is over the cube
@@ -264,8 +306,6 @@ function handleMouseDown() {
       const cubeletModel = mouseTarget.object as THREE.Mesh;
       setOpacity(cubeletModel, 0.5);
     }
-
-    controls.enabled = false;
   }
 }
 
@@ -362,26 +402,8 @@ function handleMouseMove() {
       throw new Error(`Wrong mouseTargetFaceDirection: ${mouseTargetFaceDirection}`);
     }
 
-    // Get Singmaster notation according the rotation axis and mouse movement direction
-    const position = mouseTarget.object.position;
-    // -1 0 1 -> 0 1 2
-    const index = position[layerRorationAxis] + 1;
-    layerRotationNotation = notationTable[layerRorationAxis][index];
-
-    // Package cubelet to layer
-
-    // Each Object3d can only have one parent.
-    // Object3d will be removed from cubeletModels when it is added to layerGroup.
-    // for (let i = 0; i < cubeletModels.length; i++) {
-    for (let i = cubeletModels.length - 1; i >= 0; i--) {
-      if (cubeletModels[i].position[layerRorationAxis] === mouseTarget.object.position[layerRorationAxis]) {
-        if (debug) {
-          setOpacity(cubeletModels[i] as THREE.Mesh, 0.5);
-        }
-
-        layerGroup.add(cubeletModels[i]);
-      }
-    }
+    const value = mouseTarget.object.position[layerRorationAxis];
+    layerGroup.group(layerRorationAxis, value, cubeletModels);
   } else {
     let mouseMoveDistance = mouseCoords[mouseMoveAxis] - mousedownCoords[mouseMoveAxis];
     // Get the moving distance by the camera rotation angle relative to origin when clicking on the top face and down face
@@ -401,8 +423,7 @@ function handleMouseMove() {
     if (!initMoveToward) {
       initMoveToward = Math.sign(mouseMoveDistance);
     }
-
-    if (layerGroup && layerRorationAxis) {
+    if (layerGroup.children.length && layerRorationAxis) {
       layerGroup.rotation[layerRorationAxis] =
         (mouseMoveDistance - minMoveDistance * initMoveToward) * rotationRadPerPx * layerRotationAxisToward;
     }

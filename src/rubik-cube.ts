@@ -33,7 +33,7 @@ export interface Cubelet {
 export class RubikCube {
   cubelets: Cubelet[] = [];
   colors: string[];
-  constructor(colorStr: string) {
+  constructor(colorStr?: string) {
     if (!colorStr) {
       colorStr = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB';
     }
@@ -75,14 +75,12 @@ export class RubikCube {
     }
 
     for (const cubelet of this.cubelets) {
-      const cubeColors: string[] = [c.U, c.U, c.U, c.U, c.U, c.U]; // [Right, Left, Up, Down, Front, Back]
       const cubeColor: {[index: string]: string} = {};
       const {x, y, z, num} = cubelet;
 
       // Up
       if (y === 1) {
         const i = num;
-        cubeColors[2]= c[faceColor['U'][i]];
         cubeColor['U']= c[faceColor['U'][i]];
       }
 
@@ -90,7 +88,6 @@ export class RubikCube {
       if (y === -1) {
         const n = num - 18;
         const i = Math.floor((8 - n) / 3) * 3 + (3 - (8 - n) % 3) - 1;
-        cubeColors[3] = c[faceColor['D'][i]];
         cubeColor['D'] = c[faceColor['D'][i]];
       }
 
@@ -98,21 +95,18 @@ export class RubikCube {
       if (x === 1) {
         const n = (num + 1) / 3 - 1;
         const i = Math.floor(n / 3) * 3 + (3 - n % 3) - 1;
-        cubeColors[0] = c[faceColor['R'][i]];
         cubeColor['R'] = c[faceColor['R'][i]];
       }
 
       // Left
       if (x === -1) {
         const i = num / 3;
-        cubeColors[1] = c[faceColor['L'][i]];
         cubeColor['L'] = c[faceColor['L'][i]];
       }
 
       // Front
       if (z === 1) {
         const i = Math.floor((num - 6) / 7) + ((num - 6) % 7);
-        cubeColors[4] = c[faceColor['F'][i]];
         cubeColor['F'] = c[faceColor['F'][i]];
       }
 
@@ -120,7 +114,6 @@ export class RubikCube {
       if (z === -1) {
         const n = Math.floor(num / 7) + (num % 7);
         const i = Math.floor(n / 3) * 3 + (3 - n % 3) - 1;
-        cubeColors[5] = c[faceColor['B'][i]];
         cubeColor['B'] = c[faceColor['B'][i]];
       }
       cubelet.color = cubeColor;
@@ -161,7 +154,6 @@ export class RubikCube {
     const [a, b, c, d] = faceColorNums;
     const colors = this.colors;
     const aColor = colors[a];
-    console.log(toward);
     if (toward === -1) {
       colors[a] = colors[b];
       colors[b] = colors[c];

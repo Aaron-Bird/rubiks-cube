@@ -11,6 +11,7 @@ module.exports = merge(common, {
     open: false,
     quiet: true,
     contentBase: './public',
+    watchContentBase: true,
     hot: true,
   },
 });
