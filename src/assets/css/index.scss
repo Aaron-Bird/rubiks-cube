@@ -19,6 +19,9 @@ canvas {
     bottom: 30px;
     font-family: 'Open Sans', sans-serif;
     user-select: none;
+    &.disable {
+        color: #aaa;
+      }
 }
 
 @media screen and (max-width: 768px) {
@@ -27,10 +30,6 @@ canvas {
         right: initial;
         transform: translateX(-50%);
     }
-}
-
-#ribbon.disable {
-  color: #aaa;
 }
 
 .btn {

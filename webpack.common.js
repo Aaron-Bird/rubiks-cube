@@ -15,7 +15,7 @@ module.exports = smp.wrap({
     new ForkTsCheckerWebpackPlugin(),
     new webpack.ProgressPlugin(),
     new HtmlWebpackPlugin({
-      template: './src/index.html',
+      template: './src/assets/index.html',
       inject: true,
     }),
   ],
