@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 module.exports = {
   env: {
     es6: true,
@@ -19,5 +20,6 @@ module.exports = {
     'require-jsdoc': 'off',
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': 'error',
+    'linebreak-style': 'off',
   },
 };
