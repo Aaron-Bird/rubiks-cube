@@ -143,7 +143,7 @@ export function toRotation(notation: string): [Axis, number, number] {
 }
 
 const bases = ['L', 'M', 'R', 'D', 'E', 'U', 'B', 'S', 'F'];
-const extras = ['', `'`, '2'];
+const extras = ['', `'`, '2', '', `'`];
 export function randomNotation() {
   const base = randomChoice(bases);
   const extra = randomChoice(extras);

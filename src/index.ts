@@ -149,8 +149,16 @@ const randomEl = document.querySelector('#random');
 randomEl.addEventListener('click', lock(async () => {
   draggable = false;
 
-  for (let i = 0; i < 17; i++) {
+  let i = 0;
+  let lastNotation = '';
+  while (i < 20) {
     const notation = randomNotation();
+
+    if (lastNotation && notation[0] === lastNotation[0]) {
+      continue;
+    }
+    lastNotation = notation;
+
     const [layerRorationAxis, axisValue, rotationRad] = toRotation(notation);
     rubikCube.move(notation);
     searchParam.set('fd', rubikCube.asString());
@@ -158,6 +166,8 @@ randomEl.addEventListener('click', lock(async () => {
 
     layerGroup.group(layerRorationAxis, axisValue, cubeletModels);
     await rotationTransition(layerRorationAxis, rotationRad);
+
+    i++;
   }
 
   mouseTarget = null;
@@ -216,7 +226,6 @@ function getNotation(axis: 'x' | 'y' | 'z', value: number, sign: number, endDeg:
       notation += baseStr;
     }
   }
-  console.log(notation);
   return notation;
 }
 
