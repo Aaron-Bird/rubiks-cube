@@ -8,6 +8,7 @@ import {debounce, horizontalRotationAngle, setOpacity, getClosestAxis, toRotatio
 import {RubikCubeModel} from './rubik-cube-model';
 import {LayerModel} from './layer-model';
 import {Axis, NotationBase, Toward} from './types';
+import {ProgressBar} from './libs/progress-bar';
 
 const notationTable: {[key in Axis]: [NotationBase, Toward][]} = {
   x: [['L', 1], ['M', 1], ['R', -1]],
@@ -88,6 +89,7 @@ let cubeletModels = rubikCube.model.children;
 scene.add(rubikCube.model);
 scene.add(layerGroup);
 
+
 window.addEventListener('resize', debounce(function() {
   screenWidth = window.innerWidth;
   screenHeight = window.innerHeight;
@@ -97,6 +99,77 @@ window.addEventListener('resize', debounce(function() {
   camera.updateProjectionMatrix();
   renderer.setSize(screenWidth, screenHeight);
 }));
+
+const progressBarEl = document.querySelector('#progressbar') as HTMLElement;
+const progress = new ProgressBar(progressBarEl);
+
+let disable = false;
+const ribbonEl = document.querySelector('#ribbon');
+function lock(func: Function) {
+  return async function() {
+    if (disable) {
+      return;
+    }
+
+    disable = true;
+    ribbonEl.classList.add('disable');
+    try {
+      await func();
+    } finally {
+      disable = false;
+      ribbonEl.classList.remove('disable');
+    }
+  };
+}
+
+const randomEl = document.querySelector('#random');
+randomEl.addEventListener('click', lock(async () => {
+  draggable = false;
+  progress.start();
+
+  let i = 0;
+  let lastNotation = '';
+  const total = 20;
+  while (i < total) {
+    const notation = randomNotation();
+
+    if (lastNotation && notation[0] === lastNotation[0]) {
+      continue;
+    }
+    lastNotation = notation;
+
+
+    const [layerRorationAxis, axisValue, rotationRad] = toRotation(notation);
+    rubikCube.move(notation);
+    searchParam.set('fd', rubikCube.asString());
+    window.history.replaceState('', '', '?' + searchParam.toString());
+
+    layerGroup.group(layerRorationAxis, axisValue, cubeletModels);
+    const promise = rotationTransition(layerRorationAxis, rotationRad);
+
+    i++;
+    progress.setPercentage(i / total);
+    await promise;
+  }
+
+  progress.done();
+  mouseTarget = null;
+  layerRorationAxis = null;
+  mouseMoveAxis = null;
+  draggable = true;
+}));
+
+const resetEl = document.querySelector('#reset');
+resetEl.addEventListener('click', lock(async function() {
+  scene.remove(rubikCube.model);
+  rubikCube.dispose();
+  rubikCube = new RubikCubeModel();
+  cubeletModels = rubikCube.model.children;
+  scene.add(rubikCube.model);
+
+  window.history.replaceState('', '', './');
+}));
+
 
 renderer.domElement.addEventListener('mousedown', function() {
   handleMouseDown();
@@ -126,66 +199,6 @@ renderer.domElement.addEventListener('touchmove', function(e) {
   mouseCoords.set(touch.clientX, touch.clientY);
   handleMouseMove();
 });
-let disable = false;
-const ribbonEl = document.querySelector('#ribbon');
-function lock(func: Function) {
-  return async function() {
-    if (disable) {
-      return;
-    }
-
-    disable = true;
-    ribbonEl.classList.add('disable');
-    try {
-      await func();
-    } finally {
-      disable = false;
-      ribbonEl.classList.remove('disable');
-    }
-  };
-}
-
-const randomEl = document.querySelector('#random');
-randomEl.addEventListener('click', lock(async () => {
-  draggable = false;
-
-  let i = 0;
-  let lastNotation = '';
-  while (i < 20) {
-    const notation = randomNotation();
-
-    if (lastNotation && notation[0] === lastNotation[0]) {
-      continue;
-    }
-    lastNotation = notation;
-
-    const [layerRorationAxis, axisValue, rotationRad] = toRotation(notation);
-    rubikCube.move(notation);
-    searchParam.set('fd', rubikCube.asString());
-    window.history.replaceState('', '', '?' + searchParam.toString());
-
-    layerGroup.group(layerRorationAxis, axisValue, cubeletModels);
-    await rotationTransition(layerRorationAxis, rotationRad);
-
-    i++;
-  }
-
-  mouseTarget = null;
-  layerRorationAxis = null;
-  mouseMoveAxis = null;
-  draggable = true;
-}));
-
-const resetEl = document.querySelector('#reset');
-resetEl.addEventListener('click', lock(async function() {
-  scene.remove(rubikCube.model);
-  rubikCube.dispose();
-  rubikCube = new RubikCubeModel();
-  cubeletModels = rubikCube.model.children;
-  scene.add(rubikCube.model);
-
-  window.history.replaceState('', '', './');
-}));
 
 function animate(time?: number) {
   requestAnimationFrame(animate);
@@ -246,15 +259,15 @@ async function handleMouseUp() {
   const sign = Math.sign(layerGroup.rotation[layerRorationAxis]);
 
   let endDeg;
-  if (0 <= deg && deg <= 45) {
+  if (0 <= deg && deg <= 30) {
     endDeg = 0;
-  } else if (45 < deg && deg <= 135) {
+  } else if (30 < deg && deg <= 90 + 30) {
     endDeg = 90;
-  } else if (135 < deg && deg <= 225) {
+  } else if (90 + 30 < deg && deg <= 180 + 30) {
     endDeg = 180;
-  } else if (225 < deg && deg <= 315) {
+  } else if (180 + 30 < deg && deg <= 270 +30) {
     endDeg = 270;
-  } else if (315 < deg && deg <= 360) {
+  } else if (270 +30 < deg && deg <= 360) {
     endDeg = 360;
   }
 
