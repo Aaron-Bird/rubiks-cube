@@ -9,6 +9,7 @@ import {RubikCubeModel} from './rubik-cube-model';
 import {LayerModel} from './layer-model';
 import {Axis, NotationBase, Toward} from './types';
 import {ProgressBar} from './libs/progress-bar';
+import {Router} from './libs/router';
 
 const notationTable: {[key in Axis]: [NotationBase, Toward][]} = {
   x: [['L', 1], ['M', 1], ['R', -1]],
@@ -20,9 +21,12 @@ const minMoveDistance = 10;
 const rotationRadPerPx = 0.01;
 const debug = false;
 
+
+const router = new Router();
+
 const raycaster = new THREE.Raycaster();
 let screenWidth = window.innerWidth;
-let screenHeight = window.innerHeight;
+let screenHeight = window.innerHeight * 0.95;
 const screenCenterCoords = new THREE.Vector2(screenWidth / 2, screenHeight / 2);
 
 let draggable = true;
@@ -45,7 +49,7 @@ let lockRotationDirection = false;
 
 const scene = new THREE.Scene();
 // scene.add(box);
-scene.background = new THREE.Color('#F1F3F3');
+// scene.background = new THREE.Color('#F1F3F3');
 // scene.background = new THREE.TextureLoader().load(require('./img/background.jpg').default);
 
 const directionalLight = new THREE.DirectionalLight('#FFF', 0.05);
@@ -63,28 +67,28 @@ const camera = new THREE.PerspectiveCamera(75, screenWidth / screenHeight, 0.1, 
 if (screenWidth < 576) {
   camera.position.set(4, 4, 4);
 } else {
-  camera.position.set(3.5, 3, 3.5);
+  camera.position.set(3, 3, 3);
 }
 
+const canvasEl: HTMLCanvasElement = document.querySelector('canvas');
 const renderer = new THREE.WebGLRenderer({
+  canvas: canvasEl,
   antialias: true,
+  alpha: true,
 });
 renderer.setSize(screenWidth, screenHeight);
 renderer.setPixelRatio( window.devicePixelRatio );
-document.body.appendChild(renderer.domElement);
+// document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+// const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, document.querySelector('.canvas-wrapper'));
 controls.enablePan = false;
 controls.enableDamping = true;
 controls.rotateSpeed = 1.5;
 controls.minDistance = debug ? 1 : 3;
 controls.maxDistance = debug ? 20 : 10;
 
-const URLSearchStr = window.location.search;
-const searchParam = new URLSearchParams(URLSearchStr.slice(1));
-const fd = searchParam.get('fd');
-
-let rubikCube = new RubikCubeModel(fd);
+let rubikCube = new RubikCubeModel(router.search.fd);
 let cubeletModels = rubikCube.model.children;
 scene.add(rubikCube.model);
 scene.add(layerGroup);
@@ -92,7 +96,7 @@ scene.add(layerGroup);
 
 window.addEventListener('resize', debounce(function() {
   screenWidth = window.innerWidth;
-  screenHeight = window.innerHeight;
+  screenHeight = window.innerHeight * 0.95;
   screenCenterCoords.set(screenWidth / 2, screenHeight / 2);
 
   camera.aspect = screenWidth / screenHeight;
@@ -122,6 +126,9 @@ function lock(func: Function) {
   };
 }
 
+window.onpopstate=function(event: Event) {
+  event.preventDefault();
+};
 const randomEl = document.querySelector('#random');
 randomEl.addEventListener('click', lock(async () => {
   draggable = false;
@@ -141,8 +148,8 @@ randomEl.addEventListener('click', lock(async () => {
 
     const [layerRorationAxis, axisValue, rotationRad] = toRotation(notation);
     rubikCube.move(notation);
-    searchParam.set('fd', rubikCube.asString());
-    window.history.replaceState('', '', '?' + searchParam.toString());
+
+    router.search.fd = rubikCube.asString();
 
     layerGroup.group(layerRorationAxis, axisValue, cubeletModels);
     const promise = rotationTransition(layerRorationAxis, rotationRad);
@@ -259,15 +266,15 @@ async function handleMouseUp() {
   const sign = Math.sign(layerGroup.rotation[layerRorationAxis]);
 
   let endDeg;
-  if (0 <= deg && deg <= 30) {
+  if (0 <= deg && deg <= 40) {
     endDeg = 0;
-  } else if (30 < deg && deg <= 90 + 30) {
+  } else if (40 < deg && deg <= 90 + 40) {
     endDeg = 90;
-  } else if (90 + 30 < deg && deg <= 180 + 30) {
+  } else if (90 + 40 < deg && deg <= 180 + 40) {
     endDeg = 180;
-  } else if (180 + 30 < deg && deg <= 270 +30) {
+  } else if (180 + 40 < deg && deg <= 270 + 40) {
     endDeg = 270;
-  } else if (270 +30 < deg && deg <= 360) {
+  } else if (270 + 40 < deg && deg <= 360) {
     endDeg = 360;
   }
 
@@ -280,8 +287,7 @@ async function handleMouseUp() {
     const notation = getNotation(layerRorationAxis, value, sign, endDeg);
     rubikCube.move(notation);
 
-    searchParam.set('fd', rubikCube.asString());
-    window.history.replaceState('', '', '?' + searchParam.toString());
+    router.search.fd = rubikCube.asString();
   }
 
   // const startRad =(THREE as any).Math.degToRad(deg * sign);

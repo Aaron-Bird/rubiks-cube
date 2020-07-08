@@ -24,7 +24,7 @@ export class ProgressBar {
     if (!document.querySelector('.progressbar-style')) {
       const styleEl = document.createElement('style');
       styleEl.classList.add('progressbar-style');
-      styleEl.innerText = `
+      styleEl.innerHTML = `
         .progressbar-percentage {
           transition: ${this.duration}s linear;
           height: 100%;
