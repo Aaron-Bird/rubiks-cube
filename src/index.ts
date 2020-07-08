@@ -26,7 +26,7 @@ const router = new Router();
 
 const raycaster = new THREE.Raycaster();
 let screenWidth = window.innerWidth;
-let screenHeight = window.innerHeight * 0.95;
+let screenHeight = window.innerHeight;
 const screenCenterCoords = new THREE.Vector2(screenWidth / 2, screenHeight / 2);
 
 let draggable = true;
@@ -49,7 +49,7 @@ let lockRotationDirection = false;
 
 const scene = new THREE.Scene();
 // scene.add(box);
-// scene.background = new THREE.Color('#F1F3F3');
+scene.background = new THREE.Color('#F1F3F3');
 // scene.background = new THREE.TextureLoader().load(require('./img/background.jpg').default);
 
 const directionalLight = new THREE.DirectionalLight('#FFF', 0.05);
@@ -70,18 +70,14 @@ if (screenWidth < 576) {
   camera.position.set(3, 3, 3);
 }
 
-const canvasEl: HTMLCanvasElement = document.querySelector('canvas');
 const renderer = new THREE.WebGLRenderer({
-  canvas: canvasEl,
   antialias: true,
-  alpha: true,
 });
 renderer.setSize(screenWidth, screenHeight);
 renderer.setPixelRatio( window.devicePixelRatio );
-// document.body.appendChild(renderer.domElement);
+document.body.appendChild(renderer.domElement);
 
-// const controls = new OrbitControls(camera, renderer.domElement);
-const controls = new OrbitControls(camera, document.querySelector('.canvas-wrapper'));
+const controls = new OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
 controls.enableDamping = true;
 controls.rotateSpeed = 1.5;
@@ -96,7 +92,7 @@ scene.add(layerGroup);
 
 window.addEventListener('resize', debounce(function() {
   screenWidth = window.innerWidth;
-  screenHeight = window.innerHeight * 0.95;
+  screenHeight = window.innerHeight;
   screenCenterCoords.set(screenWidth / 2, screenHeight / 2);
 
   camera.aspect = screenWidth / screenHeight;
@@ -126,9 +122,6 @@ function lock(func: Function) {
   };
 }
 
-window.onpopstate=function(event: Event) {
-  event.preventDefault();
-};
 const randomEl = document.querySelector('#random');
 randomEl.addEventListener('click', lock(async () => {
   draggable = false;
